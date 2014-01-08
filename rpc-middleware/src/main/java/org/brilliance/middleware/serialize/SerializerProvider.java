@@ -68,7 +68,7 @@ public class SerializerProvider {
 			try {
 				_kryoMap.get().writeObject((out = generateOutput(buffer)), targetObj);
 				break;
-			} catch (BufferOverflowException e) {
+			} catch (Exception e) {
 				try {
 					logger.error("[serializedWriteBuffer]Object is too big!", e);
 					size = size * 2;

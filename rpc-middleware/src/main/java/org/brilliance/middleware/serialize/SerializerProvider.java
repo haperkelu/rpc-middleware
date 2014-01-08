@@ -70,7 +70,7 @@ public class SerializerProvider {
 				break;
 			} catch (BufferOverflowException e) {
 				try {
-					logger.error(e.getMessage(), e);
+					logger.error("[serializedWriteBuffer]Object is too big!", e);
 					size = size * 2;
 					buffer = ByteBuffer.allocate(size);
 				} catch (Exception e1) {

@@ -10,7 +10,6 @@ package org.brilliance.middleware.serialize;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import org.apache.log4j.Logger;
 import com.esotericsoftware.kryo.Kryo;
@@ -62,17 +61,16 @@ public class SerializerProvider {
 		_kryoMap.get().register(c);
 		
 		int retry = 10;
-		int size = _defaultByteSize;
 		while(retry-- != 0){
 			
+			logger.debug("Action Once");
 			try {
 				_kryoMap.get().writeObject((out = generateOutput(buffer)), targetObj);
 				break;
 			} catch (Exception e) {
 				try {
 					logger.error("[serializedWriteBuffer]Object is too big!", e);
-					size = size * 2;
-					buffer = ByteBuffer.allocate(size);
+					buffer = ByteBuffer.allocate(buffer.capacity() * 2);
 				} catch (Exception e1) {
 					logger.error(e1.getMessage(), e1);
 				}
@@ -90,7 +88,7 @@ public class SerializerProvider {
 	 */
 	private static Output generateOutput(ByteBuffer buffer){
 		ByteBufferOutputStream outStream = new ByteBufferOutputStream(buffer);
-		Output out = new Output(outStream);		
+		Output out = new Output(outStream, buffer.capacity());		
 		return out;
 	} 
 	

@@ -19,6 +19,7 @@ import org.brilliance.middleware.core.LocalProxy;
 public class ClientWrapper {
 
 	
+	@SuppressWarnings("rawtypes")
 	public static Object powerStub(Class type, String hostName, int port){
 		
 		Object proxy = Proxy.newProxyInstance(ClientWrapper.class.getClassLoader(), 

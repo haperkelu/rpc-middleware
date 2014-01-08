@@ -10,6 +10,7 @@ package org.brilliance.middleware.serialize;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import org.apache.log4j.Logger;
 import com.esotericsoftware.kryo.Kryo;
@@ -57,31 +58,41 @@ public class SerializerProvider {
 	public static ByteBuffer  serializedWriteBuffer(Class<?> c, Object targetObj) throws InstantiationException, IllegalAccessException, IOException{
 				
 		ByteBuffer buffer = ByteBuffer.allocate(_defaultByteSize);
+		Output out = null;
+		_kryoMap.get().register(c);
+		
+		int retry = 10;
+		int size = _defaultByteSize;
+		while(retry-- != 0){
+			
+			try {
+				_kryoMap.get().writeObject((out = generateOutput(buffer)), targetObj);
+				break;
+			} catch (BufferOverflowException e) {
+				try {
+					logger.error(e.getMessage(), e);
+					size = size * 2;
+					buffer = ByteBuffer.allocate(size);
+				} catch (Exception e1) {
+					logger.error(e1.getMessage(), e1);
+				}
+			}			
+			
+		}
+		if(out != null) {out.flush();}				
+		return buffer;
+	}
+	
+	/**
+	 * 
+	 * @param buffer
+	 * @return
+	 */
+	private static Output generateOutput(ByteBuffer buffer){
 		ByteBufferOutputStream outStream = new ByteBufferOutputStream(buffer);
 		Output out = new Output(outStream);		
-		_kryoMap.get().register(c);
-		_kryoMap.get().writeObject(out, targetObj);
-				
-		if(out.position() < _defaultByteSize - 1){
-			out.flush();
-			return buffer;
-		} else {
-			
-			while(true){			
-				buffer = ByteBuffer.allocate(buffer.capacity() * 2);
-				outStream = new ByteBufferOutputStream(buffer);
-				out = new Output(outStream);	
-				_kryoMap.get().writeObject(out, targetObj);
-				if(out.position() < buffer.capacity() - 1){
-					out.flush();
-					break;
-				}
-			}
-
-			return buffer;
-		}				
-	
-	}
+		return out;
+	} 
 	
 	/**
 	 * 

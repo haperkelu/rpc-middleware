@@ -65,19 +65,23 @@ public class SerializerProvider {
 			
 			logger.debug("Action Once");
 			try {
-				_kryoMap.get().writeObject((out = generateOutput(buffer)), targetObj);
+				out = generateOutput(buffer);
+				_kryoMap.get().writeObject(out, targetObj);
+				if(out.position() < buffer.position()){
+					throw new RuntimeException("Capcity is not enough!");
+				}
 				break;
 			} catch (Exception e) {
 				try {
 					logger.error("[serializedWriteBuffer]Object is too big!", e);
 					buffer = ByteBuffer.allocate(buffer.capacity() * 2);
-				} catch (Exception e1) {
+				}   catch (Exception e1) {
 					logger.error(e1.getMessage(), e1);
 				}
 			}			
 			
 		}
-		if(out != null) {out.flush();}				
+		out.flush();	
 		return buffer;
 	}
 	

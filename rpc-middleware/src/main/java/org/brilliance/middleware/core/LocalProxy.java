@@ -14,7 +14,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.brilliance.middleware.serialize.CustomEntry;
 import org.brilliance.middleware.serialize.SerializerProvider;
@@ -38,6 +37,7 @@ public class LocalProxy implements InvocationHandler {
 	private int port;
 	public LocalProxy(String hostName, int port){this.hostName = hostName; this.port = port;}
 	
+	@SuppressWarnings("rawtypes")
 	public Object invoke(Object obj, Method method, Object[] values)
 			throws Throwable {
 		

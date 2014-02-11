@@ -10,9 +10,11 @@ package org.brilliance.middleware.serialize;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import org.apache.log4j.Logger;
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
@@ -54,7 +56,7 @@ public class SerializerProvider {
 	* @return ByteBuffer
 	* @throws
 	 */
-	public static ByteBuffer  serializedWriteBuffer(Class<?> c, Object targetObj) throws InstantiationException, IllegalAccessException, IOException{
+	public static ByteBuffer serializedWriteBuffer(Class<?> c, Object targetObj) throws InstantiationException, IllegalAccessException, IOException{
 				
 		ByteBuffer buffer = ByteBuffer.allocate(_defaultByteSize);
 		Output out = null;
@@ -67,21 +69,41 @@ public class SerializerProvider {
 			try {
 				out = generateOutput(buffer);
 				_kryoMap.get().writeObject(out, targetObj);
-				if(out.position() < buffer.position()){
-					throw new RuntimeException("Capcity is not enough!");
-				}
 				break;
 			} catch (Exception e) {
-				try {
-					logger.error("[serializedWriteBuffer]Object is too big!", e);
+				if(e instanceof BufferOverflowException) {
 					buffer = ByteBuffer.allocate(buffer.capacity() * 2);
-				}   catch (Exception e1) {
-					logger.error(e1.getMessage(), e1);
+					continue;
 				}
+				if(e instanceof KryoException){
+					KryoException kryoExcpetion = (KryoException) e;
+					if(kryoExcpetion.getCause() instanceof BufferOverflowException){
+						buffer = ByteBuffer.allocate(buffer.capacity() * 2);
+						continue;
+					}
+				}
+				logger.error("[serializedWriteBuffer] Error!", e);
 			}			
 			
 		}
-		out.flush();	
+		if(buffer.capacity() == buffer.position()){
+			ByteBuffer tempBuffer = ByteBuffer.allocate(buffer.capacity());
+			buffer.flip();
+			tempBuffer.put(buffer);
+			buffer.clear();
+			out.flush();
+			if(buffer.position() > 0){
+				ByteBuffer newBuffer = ByteBuffer.allocate(buffer.capacity() + buffer.position());
+				tempBuffer.flip();
+				newBuffer.put(tempBuffer);
+				buffer.flip();
+				newBuffer.put(buffer);
+				buffer = newBuffer;
+			}
+		} else {
+			out.flush();
+		}
+	
 		return buffer;
 	}
 	

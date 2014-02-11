@@ -8,6 +8,8 @@
 */
 package org.brilliance.middleware.test;
 
+import java.util.List;
+
 /**
  * @author Pie.Li
  *
@@ -17,5 +19,7 @@ public interface Mock {
 	int fn(int i, int j);
 	
 	void fn1(String m);
+	
+	void fn2(List list);
 	
 }

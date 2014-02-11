@@ -1,6 +1,9 @@
 package org.brilliance.middleware.test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
 
 import org.apache.log4j.BasicConfigurator;
 import org.brilliance.middleware.client.ClientWrapper;
@@ -8,6 +11,12 @@ import org.brilliance.middleware.core.EmbeddedServer;
 import org.brilliance.middleware.event.RPCEventHandler;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
+import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 
 /**   
  * @Title: Tester.java 
@@ -28,9 +37,8 @@ public class Tester {
 	public  static void init(){
 		BasicConfigurator.configure();
 	}
+
 	
-	
-	@Test
 	public void fn() throws InterruptedException, IOException {
 		
 		
@@ -59,13 +67,49 @@ public class Tester {
 		//Method m = proxy.getClass().getMethod("fn", paras);
 		//System.out.println(m.getName());
 		
-		int result = proxy.fn(1, 2);	
+		//int result = proxy.fn(1, 2);	
 		
-		System.out.println("final result :" + result);
-		proxy.fn1("ddd");
+		//System.out.println("final result :" + result);
+		StringBuilder builder = new StringBuilder();
+		for(int i = 0; i <= 1000; i ++){
+			builder.append("ffddddddd");
+		}
+		proxy.fn1(builder.toString());
 		
-		System.out.println("final result :" + result);
+		//System.out.println("final result :" + result);
 		System.in.read();
 		
 	}
+	
+	@Test
+	public void fn2() {
+		
+		Kryo k = new Kryo();
+		k.register(Pair.class);
+		Pair p = new Pair("key", "valuevvvvvvvvvvvvvvvvvvvvvvv");
+
+		ByteBuffer buffer = ByteBuffer.allocate(128);
+		ByteBufferOutputStream outStream = new ByteBufferOutputStream(buffer);
+		Output out = new Output(outStream, buffer.capacity());	
+
+		try {
+			k.writeObject(out, p);
+		} catch (Exception e) {
+			if(e instanceof KryoException){
+				KryoException kryoExcpetion = (KryoException) e;
+				if(kryoExcpetion.getCause() instanceof BufferOverflowException){
+					
+				}
+			}
+		}
+		System.out.println(buffer.position());
+		out.flush();
+		System.out.println(buffer.position());
+		System.out.println(new String(buffer.array()));		
+		
+		Object newList = k.readObject(new Input(new ByteArrayInputStream(buffer.array())), Pair.class);
+		System.out.println("new:" + newList);
+		
+	}
+	
 }

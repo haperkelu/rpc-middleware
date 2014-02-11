@@ -73,12 +73,14 @@ public class SerializerProvider {
 			} catch (Exception e) {
 				if(e instanceof BufferOverflowException) {
 					buffer = ByteBuffer.allocate(buffer.capacity() * 2);
+					logger.info("object is too big:" + targetObj);
 					continue;
 				}
 				if(e instanceof KryoException){
 					KryoException kryoExcpetion = (KryoException) e;
 					if(kryoExcpetion.getCause() instanceof BufferOverflowException){
 						buffer = ByteBuffer.allocate(buffer.capacity() * 2);
+						logger.info("object is too big:" + targetObj);
 						continue;
 					}
 				}

@@ -44,6 +44,7 @@ public class LocalProxy implements InvocationHandler {
 		TransferStandardData transferData = new TransferStandardData();
 		transferData.setClassFullName(method.getDeclaringClass().getCanonicalName());
 		transferData.setMethodName(method.getName());
+		transferData.setSequenceId(SequenceGenerator.getSequenceId());
 		Class returnType = method.getReturnType();
 		
 		if(method.getParameterTypes() != null && values != null){

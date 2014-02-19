@@ -38,7 +38,7 @@ public class Tester {
 		BasicConfigurator.configure();
 	}
 
-	
+	@Test
 	public void fn() throws InterruptedException, IOException {
 		
 		
@@ -67,7 +67,7 @@ public class Tester {
 		//Method m = proxy.getClass().getMethod("fn", paras);
 		//System.out.println(m.getName());
 		
-		//int result = proxy.fn(1, 2);	
+		int result = proxy.fn(1, 2);	
 		
 		//System.out.println("final result :" + result);
 		StringBuilder builder = new StringBuilder();
@@ -76,12 +76,12 @@ public class Tester {
 		}
 		proxy.fn1(builder.toString());
 		
-		//System.out.println("final result :" + result);
+		System.out.println("final result :" + result);
 		System.in.read();
 		
 	}
 	
-	@Test
+	
 	public void fn2() {
 		
 		Kryo k = new Kryo();

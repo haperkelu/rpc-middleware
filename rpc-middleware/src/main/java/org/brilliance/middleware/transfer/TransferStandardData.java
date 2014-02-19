@@ -24,6 +24,8 @@ public class TransferStandardData implements Serializable {
 	 */
 	private static final long serialVersionUID = 2490584516803696012L;
 	
+	private String sequenceId;
+	
 	private String classFullName;
 	
 	private String methodName;
@@ -72,5 +74,17 @@ public class TransferStandardData implements Serializable {
 		this.parameter = parameter;
 	}
 
+	/**
+	 * @return the sequenceId
+	 */
+	public String getSequenceId() {
+		return sequenceId;
+	}
 
+	/**
+	 * @param sequenceId the sequenceId to set
+	 */
+	public void setSequenceId(String sequenceId) {
+		this.sequenceId = sequenceId;
+	}
 }

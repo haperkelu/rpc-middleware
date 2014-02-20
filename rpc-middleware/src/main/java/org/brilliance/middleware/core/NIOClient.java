@@ -41,28 +41,32 @@ public class NIOClient {
 	public SocketChannel sendData(TransferStandardData data) throws IOException, InstantiationException, IllegalAccessException, InterruptedException {
 					
 		InetSocketAddress addr = hostName == null ? new InetSocketAddress(port):new InetSocketAddress(hostName, port); 
-				
-		SocketChannel  channel  = null;
-		channel = SocketChannel.open(); 
-		channel.configureBlocking(false);
-		channel.connect(addr);    
-		long timeBegin = Calendar.getInstance().getTime().getTime();
-		boolean timeout = false;
-		while(!channel.finishConnect()){
-			long current = Calendar.getInstance().getTime().getTime();
-			if((current - timeBegin) >= TIME_OUT){
-				timeout = true;
-				break;
+		
+		SocketChannel channel = _map.get(addr);
+		if(channel == null || !channel.isOpen() || !channel.isConnected()){
+			channel = SocketChannel.open(); 
+			channel.configureBlocking(false);
+			channel.connect(addr);    
+			long timeBegin = Calendar.getInstance().getTime().getTime();
+			boolean timeout = false;
+			while(!channel.finishConnect()){
+				long current = Calendar.getInstance().getTime().getTime();
+				if((current - timeBegin) >= TIME_OUT){
+					timeout = true;
+					break;
+				}
+				Thread.currentThread().sleep(100);
 			}
-			Thread.currentThread().sleep(100);
+			if(timeout == true){
+				throw new RuntimeException("Timeout on NIOClient[send data]; hostname " + this.hostName + ",port:" + this.port);
+			} 
+			_map.put(addr, channel);
 		}
-		if(timeout == true){
-			throw new RuntimeException("Timeout on NIOClient[send data]; hostname " + this.hostName + ",port:" + this.port);
-		}		
+		
 		ByteBuffer buffer = SerializerProvider.serializedWriteBuffer(TransferStandardData.class, data);
 		buffer.flip();
 		channel.write(buffer);
-
+		
 		return channel;
 	}
 	

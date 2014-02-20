@@ -1,7 +1,6 @@
 package org.brilliance.middleware.test;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
@@ -39,10 +38,10 @@ public class Tester {
 	}
 
 	@Test
-	public void fn() throws InterruptedException, IOException {
+	public void fn() throws Exception {
 		
 		
-		final int port = 8088;
+		final int port = 8888;
 		
 		Thread t = new Thread(new Runnable(){
 
@@ -57,10 +56,11 @@ public class Tester {
 			}
 			
 		});
+
 		t.start();
 		
 		Thread.sleep(1000);
-		Mock proxy = (Mock) ClientWrapper.powerStub(Mock.class, null, port);
+		final Mock proxy = (Mock) ClientWrapper.powerStub(Mock.class, null, port);
 		Class[] paras = new Class[2];
 		paras[0] = int.class;
 		paras[1] = int.class;
@@ -70,12 +70,27 @@ public class Tester {
 		int result = proxy.fn(1, 2);	
 		
 		//System.out.println("final result :" + result);
+		/**
 		StringBuilder builder = new StringBuilder();
 		for(int i = 0; i <= 1000; i ++){
 			builder.append("ffddddddd");
 		}
 		proxy.fn1(builder.toString());
-		
+		**/
+		for(int i = 0; i <= 10 ; i ++){
+			final int tag = i;
+			Thread tt = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					int result = proxy.fn(1, 2);	
+					System.out.println("thread:" + tag + ":" +result);
+				}
+				
+			});
+			tt.start();
+		}
+		proxy.fn(1, 2);	
 		System.out.println("final result :" + result);
 		System.in.read();
 		

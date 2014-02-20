@@ -13,11 +13,19 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.log4j.Logger;
 import org.brilliance.middleware.serialize.CustomEntry;
 import org.brilliance.middleware.serialize.SerializerProvider;
 import org.brilliance.middleware.transfer.TransferDataContext;
+import org.brilliance.middleware.transfer.TransferResult;
 import org.brilliance.middleware.transfer.TransferStandardData;
 
 /**
@@ -26,6 +34,13 @@ import org.brilliance.middleware.transfer.TransferStandardData;
  */
 public class LocalProxy implements InvocationHandler {
 
+	private final Lock lock = new ReentrantLock();  
+	private final Condition wait_result_condition = lock.newCondition();
+	
+	private static final ThreadLocal<String> sequence_pool = new ThreadLocal<String>();
+	
+	private static final Map<String, TransferResult> result_pool = new HashMap<String,TransferResult>();
+	
 	/**
 	 * Logger
 	 */
@@ -60,17 +75,19 @@ public class LocalProxy implements InvocationHandler {
 				transferData.setParameter(paras);
 			}
 		}
-		
+		// set thread-local sequence
+		sequence_pool.set(transferData.getSequenceId());
 		SocketChannel channel = new NIOClient(hostName, this.port).sendData(transferData);
 		if(returnType == void.class){
 			channel.close();
 			return new Object();
 		}
 		
-		Object result = null;
+		TransferResult result = null;
 		ByteBuffer buffer = ByteBuffer.allocate(DEFAULT_SIZE);
+		lock.lock();
 		try {
-
+			
 			while(true){
 				logger.debug("receiving data from server");
 				int readCount = channel.read(buffer);
@@ -95,20 +112,37 @@ public class LocalProxy implements InvocationHandler {
 				if(buffer.position() == 0){
 					continue;
 				} else {
-					result = SerializerProvider.deserializedRead(returnType, buffer.array());
+					result = (TransferResult) SerializerProvider.deserializedRead(TransferResult.class, buffer.array());
+					result_pool.put(sequence_pool.get(), result);
+					if(result != null && result.getSequence() != null && !result.getSequence().equalsIgnoreCase(sequence_pool.get())){
+						wait_result_condition.signalAll();
+					}
 					break;
 				}				
 				
 			}
+			
+			if(result != null && result.getSequence() != null && !result.getSequence().equalsIgnoreCase(sequence_pool.get())){
+				while(result_pool.get(sequence_pool.get()) == null){
+					wait_result_condition.await(2000, TimeUnit.MILLISECONDS);
+				}
+			}
+			result_pool.remove(sequence_pool.get());
+			return result.getResult();
+			
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		} finally{
+			lock.unlock();
+			/**
 			if(channel != null && channel.isOpen()){
 				logger.debug("channel close");
 				channel.close();
 			}
+			**/
 		}
-		return result;
+
+		return result.getResult();
 	}
 		
 	

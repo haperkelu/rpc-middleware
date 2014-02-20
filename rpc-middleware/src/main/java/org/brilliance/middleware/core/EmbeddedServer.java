@@ -24,6 +24,7 @@ import org.brilliance.middleware.event.RPCEventHandler;
 import org.brilliance.middleware.serialize.CustomEntry;
 import org.brilliance.middleware.serialize.SerializerProvider;
 import org.brilliance.middleware.transfer.TransferDataContext;
+import org.brilliance.middleware.transfer.TransferResult;
 import org.brilliance.middleware.transfer.TransferStandardData;
 
 /**
@@ -104,7 +105,7 @@ public class EmbeddedServer {
 				if(!_selector.isOpen()){
 					break;
 				}
-				int readChannels = _selector.select();
+				int readChannels = _selector.select(); //select channels for io operation
 				if(readChannels == 0){
 					continue;
 				}
@@ -124,8 +125,16 @@ public class EmbeddedServer {
 						logger.debug("key is readable");
 						SocketChannel channel = (SocketChannel) key.channel();
 						try {
-							Object readReturn = Handler.processRead(serverKey, key, channel);	
-							channel.register(_selector, SelectionKey.OP_WRITE, readReturn);
+							TransferResult result = new TransferResult();
+							Object readReturn = Handler.processRead(serverKey, key, channel, result);								
+							if(readReturn == null){
+								result.setMetaType(String.class);
+								result.setResult("void");
+							}else {
+								result.setMetaType(readReturn.getClass());
+								result.setResult(readReturn);
+							}
+							channel.register(_selector, SelectionKey.OP_WRITE, result);
 						} catch (Exception e) {
 							logger.error(e.getMessage(), e);
 							if(channel != null && channel.isOpen()){
@@ -142,13 +151,10 @@ public class EmbeddedServer {
 						SocketChannel channel = (SocketChannel) key.channel();
 						try {
 							Handler.processWrite(key, channel);
+							channel.register(_selector, SelectionKey.OP_READ);
 						} catch (Exception e) {
 							logger.error(e.getMessage(), e);
-						} finally {
-							if(channel != null && channel.isOpen()){
-								channel.close();
-							}
-						}		
+						} 		
 					}														
 										
 				}
@@ -177,7 +183,7 @@ public class EmbeddedServer {
 		 * @throws ClassNotFoundException
 		 */
 		@SuppressWarnings("rawtypes")
-		public static Object processRead(SelectionKey serverKey, SelectionKey key, SocketChannel channel) throws IOException, ClassNotFoundException {
+		public static Object processRead(SelectionKey serverKey, SelectionKey key, SocketChannel channel, TransferResult transferResult) throws IOException, ClassNotFoundException {
 			
 			ByteBuffer buffer = ByteBuffer.allocate(DEFAULT_SIZE);
 			if (channel.read(buffer) >= DEFAULT_SIZE){
@@ -200,6 +206,7 @@ public class EmbeddedServer {
 			if(buffer.position() == 0) {return null;}
 			logger.debug("read content:" + new String(buffer.array()) + ";position:" + buffer.position());
 			TransferStandardData bizData = (TransferStandardData) SerializerProvider.deserializedRead(TransferStandardData.class, buffer.array());
+			transferResult.setSequence(bizData.getSequenceId());
 			logger.debug(bizData.getClassFullName());
 			logger.debug(bizData.getParameter());
 			logger.debug(eventList);
@@ -270,11 +277,7 @@ public class EmbeddedServer {
 			logger.debug("writer key:" + key);
 			logger.debug("attachment:" + attachment);
 			ByteBuffer buffer = null;
-			if(attachment == null){
-				buffer = SerializerProvider.serializedWriteBuffer(String.class, "void");
-			}else {
-				buffer = SerializerProvider.serializedWriteBuffer(attachment.getClass(), attachment);
-			}
+			buffer = SerializerProvider.serializedWriteBuffer(attachment.getClass(), attachment);
 			
 			logger.debug("buffer:" + new String(buffer.array()) + ";count" + buffer.position());
 			buffer.flip();

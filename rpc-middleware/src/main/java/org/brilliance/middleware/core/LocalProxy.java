@@ -77,9 +77,8 @@ public class LocalProxy implements InvocationHandler {
 		}
 		// set thread-local sequence
 		sequence_pool.set(transferData.getSequenceId());
-		SocketChannel channel = new NIOClient(hostName, this.port).sendData(transferData);
+		SocketChannel channel = NIOClientUtils.sendData(this.hostName, this.port, transferData);
 		if(returnType == void.class){
-			channel.close();
 			return new Object();
 		}
 		

@@ -58,6 +58,9 @@ public class NIOClient {
 				Thread.currentThread().sleep(100);
 			}
 			if(timeout == true){
+				if(channel != null){
+					channel.close();
+				}
 				throw new RuntimeException("Timeout on NIOClient[send data]; hostname " + this.hostName + ",port:" + this.port);
 			} 
 			_map.put(addr, channel);
